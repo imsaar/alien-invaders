@@ -20,9 +20,9 @@ const PLAYER_W = 40, PLAYER_H = 20;
 const BULLET_W = 4, BULLET_H = 10;
 const ALIEN_W = 30, ALIEN_H = 20;
 const ALIEN_ROWS = 5, ALIEN_COLS = 10;
-const ALIEN_SPEED = 20; // px per second
-const ALIEN_DROP = 20;  // px per step down
-
+const BASE_ALIEN_SPEED = 20;            // renamed, kept const
+let currentAlienSpeed = BASE_ALIEN_SPEED; // mutable copy
+const ALIEN_DROP = 20;
 /* ---------- CANVAS & INPUT ---------- */
 const cvs = document.getElementById('gameCanvas');
 const ctx = cvs.getContext('2d');
@@ -95,7 +95,7 @@ function update(dt) {
       vy: -500,
       fromPlayer: true
     });
-    keys['Space'] = false; // one shot per press
+    keys['Space'] = false;
   }
 
   /* bullets */
@@ -110,7 +110,7 @@ function update(dt) {
     let hitEdge = false;
     aliens.forEach(a => {
       if (!a.alive) return;
-      a.x += ALIEN_SPEED * alienDir * moveInterval;
+      a.x += currentAlienSpeed * alienDir * moveInterval;   // ← FIXED
       if (a.x <= 0 || a.x + ALIEN_W >= W) hitEdge = true;
     });
     if (hitEdge) {
@@ -165,12 +165,15 @@ function update(dt) {
 
   /* win */
   if (aliens.every(a => !a.alive)) {
-    initAliens();
-    alienDir = 1;
-    alienSpeed *= 1.1; // next wave harder
+    // schedule next level on the *next* frame so the current
+    // update loop can finish cleanly
+    setTimeout(() => {
+      initAliens();
+      alienDir = 1;
+      currentAlienSpeed *= 1.1; // safe: it's a let/ var
+    }, 0);
   }
 }
-
 /* ---------- DRAW ---------- */
 function draw() {
   ctx.clearRect(0, 0, W, H);
