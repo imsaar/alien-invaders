@@ -78,16 +78,22 @@ function gameLoop(timestamp) {
 }
 requestAnimationFrame(gameLoop);
 
-/* ---------- UPDATE ---------- */
+/* ---------- NEW HELPERS ---------- */
+const explosions = [];                 // {x, y, frame}
+function addExplosion(x, y) {
+  explosions.push({ x, y, frame: 0 });
+}
+
+/* ---------- UPDATED UPDATE ---------- */
 function update(dt) {
-  /* player movement */
+  /* ---- player movement ---- */
   player.vx = 0;
   if (keys['ArrowLeft'])  player.vx = -300;
   if (keys['ArrowRight']) player.vx = 300;
   player.x += player.vx * dt;
   player.x = Math.max(0, Math.min(W - PLAYER_W, player.x));
 
-  /* player shoot */
+  /* ---- player shoot ---- */
   if (keys['Space'] && !bullets.find(b => b.fromPlayer)) {
     bullets.push({
       x: player.x + PLAYER_W/2 - BULLET_W/2,
@@ -98,26 +104,25 @@ function update(dt) {
     keys['Space'] = false;
   }
 
-  /* bullets */
+  /* ---- bullets ---- */
   bullets.forEach(b => b.y += b.vy * dt);
   bullets = bullets.filter(b => b.y > -BULLET_H && b.y < H);
 
-  /* aliens move & shoot */
+  /* ---- aliens move & shoot ---- */
   lastAlienMove += dt;
-  const moveInterval = 0.5; // seconds
+  const moveInterval = 0.5;
   if (lastAlienMove > moveInterval) {
     lastAlienMove = 0;
     let hitEdge = false;
     aliens.forEach(a => {
       if (!a.alive) return;
-      a.x += currentAlienSpeed * alienDir * moveInterval;   // ← FIXED
+      a.x += currentAlienSpeed * alienDir * moveInterval;
       if (a.x <= 0 || a.x + ALIEN_W >= W) hitEdge = true;
     });
     if (hitEdge) {
       alienDir *= -1;
       aliens.forEach(a => a.y += ALIEN_DROP);
     }
-    /* random alien shoots */
     const shooters = aliens.filter(a => a.alive);
     if (shooters.length && Math.random() < 0.3) {
       const a = shooters[Math.floor(Math.random()*shooters.length)];
@@ -130,11 +135,11 @@ function update(dt) {
     }
   }
 
-  /* alien bullets */
+  /* ---- alien bullets ---- */
   alienBullets.forEach(b => b.y += b.vy * dt);
   alienBullets = alienBullets.filter(b => b.y > -BULLET_H && b.y < H);
 
-  /* collisions */
+  /* ---- collisions ---- */
   bullets.forEach((b, bi) => {
     if (!b.fromPlayer) return;
     aliens.forEach(a => {
@@ -154,46 +159,67 @@ function update(dt) {
       alienBullets.splice(bi, 1);
       lives--;
       updateUI();
+      addExplosion(player.x + PLAYER_W/2, player.y + PLAYER_H/2);
       if (lives <= 0) gameOver = true;
     }
   });
 
-  /* alien reaches bottom */
+  /* ---- alien reaches bottom ---- */
   if (aliens.some(a => a.alive && a.y + ALIEN_H >= player.y)) {
     gameOver = true;
   }
 
-  /* win */
+  /* ---- win level ---- */
   if (aliens.every(a => !a.alive)) {
-    // schedule next level on the *next* frame so the current
-    // update loop can finish cleanly
     setTimeout(() => {
       initAliens();
       alienDir = 1;
-      currentAlienSpeed *= 1.1; // safe: it's a let/ var
+      currentAlienSpeed *= 1.1;
     }, 0);
   }
+
+  /* ---- animate explosions ---- */
+  explosions.forEach(e => e.frame += dt * 32); // 32 fps
+  for (let i = explosions.length - 1; i >= 0; i--) {
+    if (explosions[i].frame >= 16) explosions.splice(i, 1);
+  }
 }
-/* ---------- DRAW ---------- */
+
+/* ---------- UPDATED DRAW ---------- */
 function draw() {
   ctx.clearRect(0, 0, W, H);
-  /* player */
-  ctx.fillStyle = '#0f0';
-  ctx.fillRect(player.x, player.y, PLAYER_W, PLAYER_H);
 
-  /* bullets */
+  /* draw player (cyan gradient) */
+  if (explosions.length === 0) {   // hide ship while exploding
+    const g = ctx.createLinearGradient(player.x, player.y,
+                                       player.x, player.y + PLAYER_H);
+    g.addColorStop(0, '#00ffff');
+    g.addColorStop(1, '#0080ff');
+    ctx.fillStyle = g;
+    ctx.fillRect(player.x, player.y, PLAYER_W, PLAYER_H);
+  }
+
+  /* draw bullets */
   ctx.fillStyle = '#fff';
   bullets.forEach(b => ctx.fillRect(b.x, b.y, BULLET_W, BULLET_H));
   ctx.fillStyle = '#f00';
   alienBullets.forEach(b => ctx.fillRect(b.x, b.y, BULLET_W, BULLET_H));
 
-  /* aliens */
+  /* draw aliens */
   ctx.fillStyle = '#0f0';
   aliens.forEach(a => {
     if (a.alive) ctx.fillRect(a.x, a.y, ALIEN_W, ALIEN_H);
   });
-}
 
+  /* draw explosions (concentric circles shrinking) */
+  explosions.forEach(e => {
+    const radius = (16 - e.frame) * 3;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, ${Math.floor(e.frame * 10)}, 0, ${1 - e.frame/16})`;
+    ctx.fill();
+  });
+}
 /* ---------- UTILS ---------- */
 function rectIntersect(a, b) {
   return a.x < b.x + ALIEN_W &&
