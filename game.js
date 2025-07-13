@@ -14,6 +14,69 @@ const keys = {};
 onkeydown = e => keys[e.code] = true;
 onkeyup   = e => keys[e.code] = false;
 
+/* ---------- ALIEN SPRITE ---------- */
+const alienImage = new Image();
+alienImage.onload = () => console.log('Alien sprite loaded');
+
+// Create alien sprite programmatically on a canvas
+const spriteCanvas = document.createElement('canvas');
+spriteCanvas.width = 30;
+spriteCanvas.height = 20;
+const spriteCtx = spriteCanvas.getContext('2d');
+
+// Draw a bright green space invader
+spriteCtx.fillStyle = '#00ff00';
+// Body
+spriteCtx.fillRect(8, 4, 14, 8);
+// Arms
+spriteCtx.fillRect(4, 8, 4, 8);
+spriteCtx.fillRect(22, 8, 4, 8);
+// Eyes
+spriteCtx.fillStyle = '#000';
+spriteCtx.fillRect(10, 6, 2, 2);
+spriteCtx.fillRect(18, 6, 2, 2);
+// Antennae
+spriteCtx.fillStyle = '#00ff00';
+spriteCtx.fillRect(10, 0, 2, 4);
+spriteCtx.fillRect(18, 0, 2, 4);
+
+alienImage.src = spriteCanvas.toDataURL();
+
+/* ---------- PLAYER SHIP SPRITE ---------- */
+const shipImage = new Image();
+shipImage.onload = () => console.log('Ship sprite loaded');
+
+// Create ship sprite programmatically on a canvas
+const shipCanvas = document.createElement('canvas');
+shipCanvas.width = 40;
+shipCanvas.height = 20;
+const shipCtx = shipCanvas.getContext('2d');
+
+// Draw a cyan/blue gradient spaceship
+const gradient = shipCtx.createLinearGradient(0, 0, 0, 20);
+gradient.addColorStop(0, '#00ffff');
+gradient.addColorStop(1, '#0080ff');
+
+shipCtx.fillStyle = gradient;
+// Main body (triangle shape)
+shipCtx.beginPath();
+shipCtx.moveTo(20, 0);     // Top center
+shipCtx.lineTo(35, 20);    // Bottom right
+shipCtx.lineTo(5, 20);     // Bottom left
+shipCtx.closePath();
+shipCtx.fill();
+
+// Cockpit
+shipCtx.fillStyle = '#ffffff';
+shipCtx.fillRect(18, 5, 4, 4);
+
+// Wing details
+shipCtx.fillStyle = '#00ffff';
+shipCtx.fillRect(0, 15, 8, 5);
+shipCtx.fillRect(32, 15, 8, 5);
+
+shipImage.src = shipCanvas.toDataURL();
+
 /* ---------- GAME OBJECTS ---------- */
 let player = { x: W/2 - PLAYER_W/2, y: H - 60, vx: 0 };
 let bullets = [];
@@ -173,14 +236,19 @@ function update(dt) {
 function draw() {
   ctx.clearRect(0, 0, W, H);
 
-  /* draw player (cyan gradient) */
+  /* draw player spaceship */
   if (explosions.length === 0) {   // hide ship while exploding
-    const g = ctx.createLinearGradient(player.x, player.y,
-                                       player.x, player.y + PLAYER_H);
-    g.addColorStop(0, '#00ffff');
-    g.addColorStop(1, '#0080ff');
-    ctx.fillStyle = g;
-    ctx.fillRect(player.x, player.y, PLAYER_W, PLAYER_H);
+    if (shipImage.complete) {
+      ctx.drawImage(shipImage, player.x, player.y, PLAYER_W, PLAYER_H);
+    } else {
+      // Fallback to gradient rectangle if image not loaded
+      const g = ctx.createLinearGradient(player.x, player.y,
+                                         player.x, player.y + PLAYER_H);
+      g.addColorStop(0, '#00ffff');
+      g.addColorStop(1, '#0080ff');
+      ctx.fillStyle = g;
+      ctx.fillRect(player.x, player.y, PLAYER_W, PLAYER_H);
+    }
   }
 
   /* draw bullets */
@@ -190,9 +258,16 @@ function draw() {
   alienBullets.forEach(b => ctx.fillRect(b.x, b.y, BULLET_W, BULLET_H));
 
   /* draw aliens */
-  ctx.fillStyle = '#0f0';
   aliens.forEach(a => {
-    if (a.alive) ctx.fillRect(a.x, a.y, ALIEN_W, ALIEN_H);
+    if (a.alive) {
+      if (alienImage.complete) {
+        ctx.drawImage(alienImage, a.x, a.y, ALIEN_W, ALIEN_H);
+      } else {
+        // Fallback to green rectangles if image not loaded
+        ctx.fillStyle = '#0f0';
+        ctx.fillRect(a.x, a.y, ALIEN_W, ALIEN_H);
+      }
+    }
   });
 
   /* draw explosions (concentric circles shrinking) */
@@ -219,7 +294,7 @@ function restart() {
   score = 0; lives = 3;
   initAliens();
   alienDir = 1;
-  alienSpeed = 20;
+  currentAlienSpeed = BASE_ALIEN_SPEED;
   bullets = []; alienBullets = [];
   gameOver = false;
   updateUI();
