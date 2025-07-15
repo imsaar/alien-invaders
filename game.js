@@ -17,12 +17,16 @@ onkeyup   = e => keys[e.code] = false;
 /* ---------- RESPONSIVE SCALING ---------- */
 let scale = 1;
 function resizeCanvas() {
-    const containerWidth = Math.min(window.innerWidth, 480);
-    const containerHeight = window.innerHeight - 40; // Account for UI bar
+    // Get the UI element height
+    const uiHeight = document.getElementById('ui').offsetHeight;
+    
+    // Calculate available space
+    const availableWidth = window.innerWidth - 10; // Small margin for border
+    const availableHeight = window.innerHeight - uiHeight - 10; // UI height + margin
     
     // Calculate scale to fit the screen while maintaining aspect ratio
-    const scaleX = containerWidth / W;
-    const scaleY = containerHeight / H;
+    const scaleX = availableWidth / W;
+    const scaleY = availableHeight / H;
     scale = Math.min(scaleX, scaleY);
     
     // Set canvas display size
