@@ -44,7 +44,8 @@ window.addEventListener('resize', resizeCanvas);
 
 // Touch controls for mobile
 let touchTargetX = null;
-let lastTapTime = 0;
+let touchStartTime = 0;
+let touchMoved = false;
 
 cvs.addEventListener('touchstart', (e) => {
     e.preventDefault();
@@ -54,15 +55,12 @@ cvs.addEventListener('touchstart', (e) => {
     
     // Track target position for smooth movement
     touchTargetX = touchX;
+    touchStartTime = Date.now();
+    touchMoved = false;
     
-    // Detect tap for shooting (quick touch without much movement)
-    const currentTime = Date.now();
-    if (currentTime - lastTapTime < 300) {
-        // Double tap or quick tap - always shoot
-        keys['Space'] = true;
-        setTimeout(() => keys['Space'] = false, 100);
-    }
-    lastTapTime = currentTime;
+    // Immediate shoot on tap
+    keys['Space'] = true;
+    setTimeout(() => keys['Space'] = false, 100);
 });
 
 cvs.addEventListener('touchmove', (e) => {
@@ -73,18 +71,20 @@ cvs.addEventListener('touchmove', (e) => {
     
     // Update target position for smooth movement
     touchTargetX = touchX;
+    touchMoved = true;
 });
 
 cvs.addEventListener('touchend', (e) => {
     e.preventDefault();
     
-    // Single tap also shoots
-    if (touchTargetX !== null) {
+    // If it was a quick tap without movement, ensure we shoot
+    if (!touchMoved && (Date.now() - touchStartTime < 200)) {
         keys['Space'] = true;
         setTimeout(() => keys['Space'] = false, 100);
     }
     
     touchTargetX = null;
+    touchMoved = false;
 });
 
 /* ---------- ALIEN SPRITE ---------- */
