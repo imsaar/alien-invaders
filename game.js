@@ -44,7 +44,6 @@ window.addEventListener('resize', resizeCanvas);
 
 // Touch controls for mobile
 let touchStartX = null;
-let touchStartY = null;
 let isTouching = false;
 
 cvs.addEventListener('touchstart', (e) => {
@@ -52,13 +51,10 @@ cvs.addEventListener('touchstart', (e) => {
     const touch = e.touches[0];
     const rect = cvs.getBoundingClientRect();
     touchStartX = (touch.clientX - rect.left) / scale;
-    touchStartY = (touch.clientY - rect.top) / scale;
     isTouching = true;
     
-    // Fire when touching upper half of screen
-    if (touchStartY < H / 2) {
-        keys['Space'] = true;
-    }
+    // Always fire on tap
+    keys['Space'] = true;
 });
 
 cvs.addEventListener('touchmove', (e) => {
