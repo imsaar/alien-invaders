@@ -14,6 +14,75 @@ const keys = {};
 onkeydown = e => keys[e.code] = true;
 onkeyup   = e => keys[e.code] = false;
 
+/* ---------- RESPONSIVE SCALING ---------- */
+let scale = 1;
+function resizeCanvas() {
+    const containerWidth = Math.min(window.innerWidth, 480);
+    const containerHeight = window.innerHeight - 40; // Account for UI bar
+    
+    // Calculate scale to fit the screen while maintaining aspect ratio
+    const scaleX = containerWidth / W;
+    const scaleY = containerHeight / H;
+    scale = Math.min(scaleX, scaleY);
+    
+    // Set canvas display size
+    cvs.style.width = (W * scale) + 'px';
+    cvs.style.height = (H * scale) + 'px';
+    
+    // Keep internal resolution for crisp graphics
+    cvs.width = W;
+    cvs.height = H;
+}
+
+// Initialize canvas size and listen for resize
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// Touch controls for mobile
+let touchStartX = null;
+let touchStartY = null;
+let isTouching = false;
+
+cvs.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = cvs.getBoundingClientRect();
+    touchStartX = (touch.clientX - rect.left) / scale;
+    touchStartY = (touch.clientY - rect.top) / scale;
+    isTouching = true;
+    
+    // Fire when touching upper half of screen
+    if (touchStartY < H / 2) {
+        keys['Space'] = true;
+    }
+});
+
+cvs.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!isTouching) return;
+    
+    const touch = e.touches[0];
+    const rect = cvs.getBoundingClientRect();
+    const touchX = (touch.clientX - rect.left) / scale;
+    
+    // Move player based on touch position
+    if (touchX < W / 2) {
+        keys['ArrowLeft'] = true;
+        keys['ArrowRight'] = false;
+    } else {
+        keys['ArrowRight'] = true;
+        keys['ArrowLeft'] = false;
+    }
+});
+
+cvs.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    isTouching = false;
+    keys['ArrowLeft'] = false;
+    keys['ArrowRight'] = false;
+    keys['Space'] = false;
+});
+
 /* ---------- ALIEN SPRITE ---------- */
 const alienImage = new Image();
 alienImage.onload = () => console.log('Alien sprite loaded');
