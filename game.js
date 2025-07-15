@@ -43,44 +43,48 @@ resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
 // Touch controls for mobile
-let touchStartX = null;
-let isTouching = false;
+let touchTargetX = null;
+let lastTapTime = 0;
 
 cvs.addEventListener('touchstart', (e) => {
     e.preventDefault();
     const touch = e.touches[0];
     const rect = cvs.getBoundingClientRect();
-    touchStartX = (touch.clientX - rect.left) / scale;
-    isTouching = true;
+    const touchX = (touch.clientX - rect.left) / scale;
     
-    // Always fire on tap
-    keys['Space'] = true;
+    // Track target position for smooth movement
+    touchTargetX = touchX;
+    
+    // Detect tap for shooting (quick touch without much movement)
+    const currentTime = Date.now();
+    if (currentTime - lastTapTime < 300) {
+        // Double tap or quick tap - always shoot
+        keys['Space'] = true;
+        setTimeout(() => keys['Space'] = false, 100);
+    }
+    lastTapTime = currentTime;
 });
 
 cvs.addEventListener('touchmove', (e) => {
     e.preventDefault();
-    if (!isTouching) return;
-    
     const touch = e.touches[0];
     const rect = cvs.getBoundingClientRect();
     const touchX = (touch.clientX - rect.left) / scale;
     
-    // Move player based on touch position
-    if (touchX < W / 2) {
-        keys['ArrowLeft'] = true;
-        keys['ArrowRight'] = false;
-    } else {
-        keys['ArrowRight'] = true;
-        keys['ArrowLeft'] = false;
-    }
+    // Update target position for smooth movement
+    touchTargetX = touchX;
 });
 
 cvs.addEventListener('touchend', (e) => {
     e.preventDefault();
-    isTouching = false;
-    keys['ArrowLeft'] = false;
-    keys['ArrowRight'] = false;
-    keys['Space'] = false;
+    
+    // Single tap also shoots
+    if (touchTargetX !== null) {
+        keys['Space'] = true;
+        setTimeout(() => keys['Space'] = false, 100);
+    }
+    
+    touchTargetX = null;
 });
 
 /* ---------- ALIEN SPRITE ---------- */
@@ -203,9 +207,22 @@ function addExplosion(x, y) {
 /* ---------- UPDATED UPDATE ---------- */
 function update(dt) {
   /* ---- player movement ---- */
+  // Keyboard controls
   player.vx = 0;
   if (keys['ArrowLeft'])  player.vx = -300;
   if (keys['ArrowRight']) player.vx = 300;
+  
+  // Touch controls - smooth movement to touch position
+  if (touchTargetX !== null) {
+    const targetX = touchTargetX - PLAYER_W / 2;
+    const diff = targetX - player.x;
+    const speed = 800; // Faster speed for responsive movement
+    
+    if (Math.abs(diff) > 2) {
+      player.vx = diff > 0 ? Math.min(speed, diff * 10) : Math.max(-speed, diff * 10);
+    }
+  }
+  
   player.x += player.vx * dt;
   player.x = Math.max(0, Math.min(W - PLAYER_W, player.x));
 
